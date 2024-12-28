@@ -1,5 +1,7 @@
 import os
 import platform
+import sys
+
 def generate_key_with_dev_random(length):
     """
     Generate a cryptographically secure key using /dev/random
@@ -19,7 +21,14 @@ def generate_key_with_dev_random(length):
         raise NotImplementedError("This platform is not supported.")
     return key
 
-length = 16
-# count of bytes for key
-key = generate_key_with_dev_random(length)
-print("Key (hex):", key.hex())
+if len(sys.argv) < 3:
+    print("<key_file_path> <key_len>")
+
+key_file_path = sys.argv[1]
+length = int(sys.argv[2])
+
+with open(key_file_path, "wb") as file:
+    key = generate_key_with_dev_random(length)
+    file.write(key)
+
+print(f'key generated into file: {key_file_path}')

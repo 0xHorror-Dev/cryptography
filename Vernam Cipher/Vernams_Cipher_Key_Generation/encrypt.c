@@ -7,11 +7,9 @@
 
 #define ERR_KEY_LEN_NOT_EQUAL_DATA_LEN -1
 
-int16_t sse_xor_encrypt(const char* key, const char* data, char* out)
+int16_t sse_xor_encrypt(const uint8_t* key, size_t key_len, const uint8_t* data, size_t data_len, uint8_t* out)
 {
-    size_t data_len = strlen(data);
-    size_t key_len = strlen(key);
-    if(key_len < data_len)
+    if (key_len < data_len)
     {
         return ERR_KEY_LEN_NOT_EQUAL_DATA_LEN;
     }
@@ -40,40 +38,56 @@ int16_t sse_xor_encrypt(const char* key, const char* data, char* out)
 
 int main(int argc, char* argv[])
 {
-    if(argc == 3)
+    if (argc == 3)
     {
         FILE* file = fopen(argv[2], "rb+");
-        if(file == NULL)
+        if (file == NULL)
         {
             printf("failed to open file %s", argv[2]);
+            return -1;
+        }
+
+        FILE* key_file = fopen(argv[1], "rb+");
+        if (file == NULL)
+        {
+            printf("failed to open file %s", argv[1]);
             return -1;
         }
 
         fseek(file, 0L, SEEK_END);
         size_t fsize = ftell(file);
         fseek(file, 0L, SEEK_SET);
+        fseek(key_file, 0L, SEEK_END);
+        size_t kfsize = ftell(key_file);
+        fseek(key_file, 0L, SEEK_SET);
 
-        char* out_data = malloc(fsize+1);
-        char* file_data = malloc(fsize+1);
-        fread(file_data, sizeof(char), fsize, file);
+        uint8_t* out_data = (uint8_t*)malloc(fsize + 1);
+        uint8_t* file_data = (uint8_t*)malloc(fsize + 1);
+        uint8_t* key_data = (uint8_t*)malloc(kfsize + 1);
+        fread(file_data, sizeof(uint8_t), fsize, file);
+        fread(key_data, sizeof(uint8_t), kfsize, key_file);
         fclose(file);
+        fclose(key_file);
 
-        int16_t res = sse_xor_encrypt(argv[1], file_data, out_data);
-        if(res == ERR_KEY_LEN_NOT_EQUAL_DATA_LEN)
+        int16_t res = sse_xor_encrypt(key_data, kfsize, file_data, fsize, out_data);
+        if (res == ERR_KEY_LEN_NOT_EQUAL_DATA_LEN)
         {
             free(out_data);
+            free(file_data);
+            free(key_data);
             puts("error: ERR_KEY_LEN_NOT_EQUAL_DATA_LEN");
             return -1;
         }
 
         fopen(argv[2], "wb");
-        fwrite(out_data, sizeof(char), fsize, file);        
-        //out_data[fsize] = '\0';
-        //puts(out_data);
+        fwrite(out_data, sizeof(char), fsize, file);
+        free(out_data);
+        free(file_data);
+        free(key_data);
     }
     else
     {
-        puts("<key> <filename>");
+        puts("<key_filename> <filename>");
         return -1;
     }
 
